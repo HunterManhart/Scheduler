@@ -1,14 +1,15 @@
 from pulp import *
-import xlrd
+from openpyxl import Workbook
+from preprocess import firmNames, studentNames, meetings
 
 # pulp.pulpTestAll()
 
 #       Initial Data
 # Open the workbook and define the worksheet
-book = xlrd.open_workbook("input/practice.xlsx")
-sheet = book.sheet_by_name("Sheet1")
+# book = xlrd.open_workbook("input/Meetings.xlsx")
+# sheet = book.sheet_by_name("Interviews")
 
-meetings = [ [sheet.cell(student, firm).value for student in range(1, sheet.nrows)] for firm in range(1, sheet.ncols)]
+# meetings = [ [sheet.cell(student, firm).value for student in range(1, sheet.nrows)] for firm in range(1, sheet.ncols)]
 
 # meetings = [
 #     [1, 0, 1, 0],
@@ -18,13 +19,13 @@ meetings = [ [sheet.cell(student, firm).value for student in range(1, sheet.nrow
 
 # print(meetings)
 
-firms = range(0, len(meetings))
-students = range(0, len(meetings[0]))
+firms = range(0, meetings.shape[0])
+students = range(0, meetings.shape[1])
 
 
 #       Processed Data
 # Timeslots in a day
-timeslots = 20
+timeslots = 22
 # List to record variables in use
 possible_slots = []
 
@@ -54,7 +55,8 @@ scheduler += lpSum([fst[slot] * slot[2] for slot in possible_slots]), "Weight on
 # Students don't overlap meetings and have breaks
 for student in students:
     for slotNum in range(1, timeslots-1):
-        scheduler += lpSum([fst[(firm, student, slotNum)] for firm in firms if meetings[firm][student] == 1] + [fst[(firm, student, slotNum + 1)] for firm in firms if meetings[firm][student] == 1]) <= 1
+        scheduler += lpSum([fst[(firm, student, slotNum)] for firm in firms if meetings[firm][student] == 1]) <= 1
+        # scheduler += lpSum([fst[(firm, student, slotNum)] for firm in firms if meetings[firm][student] == 1] + [fst[(firm, student, slotNum + 1)] for firm in firms if meetings[firm][student] == 1]) <= 1
 
 # Firms don't have more than 1 student in a timeslot
 for firm in firms:
@@ -74,11 +76,23 @@ for i, firmList in enumerate(meetings):
 
 scheduler.solve()
 
+
+wb = Workbook()
+
+# grab the active worksheet
+ws = wb.active
+
+ws.append(firmNames)
+print(firm)
+
 ftSlots = {}
 for slot in possible_slots:
     if fst[slot].value() == 1:
         print(slot)
         ftSlots[(slot[0], slot[2])] = slot[1]
+
+        print(str(studentNames[slot[1]]))
+        ws.cell(row=slot[2]+2, column=slot[0]+1).value = str(studentNames[slot[1]])
 
 for slot in range(1, timeslots):
     string = ""
@@ -88,4 +102,7 @@ for slot in range(1, timeslots):
         else:
             string += " "
         string += "  "
-    print string
+    print(string)
+
+# Save the file
+wb.save("Final.xlsx")

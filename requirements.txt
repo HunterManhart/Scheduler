@@ -1,1 +1,3 @@
 PuLP==1.6.5
+xlrd==1.1.0
+openpyxl==2.5.3
